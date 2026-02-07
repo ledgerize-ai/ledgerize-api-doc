@@ -12,6 +12,11 @@ Returns job status and progress.
 
 Returns the converted data. For `JSON`, the response is JSON; for `CSV`/`XLS`, a file download.
 
+### Notes
+
+- If you request the result before the job completes, you'll get a `409 NOT_READY`.
+- Jobs are ephemeral; fetch results soon after completion (job status and result may not be retained indefinitely).
+
 ```json
 { "normalised": [ { "date": "2025-03-13", "description": "Start balance" } ] }
 ```

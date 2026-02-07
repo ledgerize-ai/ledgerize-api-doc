@@ -13,7 +13,13 @@ Errors are returned in a normalized JSON envelope:
 Common codes:
 
 - `AUTH_INVALID_KEY` (401): Invalid or missing API key
+- `AUTH_NOT_CONFIGURED` (503): API auth is not configured on the server
+- `AUTH_UNAVAILABLE` (503): Temporary issue validating API keys
 - `RATE_LIMITED` (429): Per-key rate limit exceeded
 - `FILE_REQUIRED` (400): Missing multipart `file` field
+- `INVALID_IDS` (400): Missing or empty `ids[]` in a convert request
 - `PASSWORD_REQUIRED` (400): Missing `password` in body
-- `UPLOAD_FAILED`, `CONVERT_FAILED`, `SET_PASSWORD_FAILED` (5xx): Processing or upstream error
+- `NOT_FOUND` (404): Job not found (expired or invalid `jobId`)
+- `NOT_READY` (409): Job exists but is not completed yet
+- `UPLOAD_UNEXPECTED` (502): Upload succeeded upstream, but the response could not be parsed
+- `UPLOAD_FAILED`, `CONVERT_FAILED`, `SET_PASSWORD_FAILED` (502): Processing or upstream error (check `error.details.reason`)

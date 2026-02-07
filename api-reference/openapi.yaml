@@ -5,10 +5,13 @@ info:
   description: |
     Convert bank statement PDFs into structured data via the Ledgerize API.
     Authentication uses an API key sent in the `X-Api-Key` header.
+externalDocs:
+  description: Download the Postman collection
+  url: https://ledgerize.ai/postman/ledgerize.postman_collection.json
 servers:
   - url: https://ledgerize.ai
     description: Production
-  - url: https://localhost:3000
+  - url: http://localhost:3000
     description: Local (development)
 components:
   securitySchemes:
@@ -16,6 +19,22 @@ components:
       type: apiKey
       in: header
       name: X-Api-Key
+  headers:
+    RateLimitLimit:
+      description: Requests allowed per minute for the provided API key.
+      schema:
+        type: integer
+        minimum: 1
+    RateLimitRemaining:
+      description: Requests remaining in the current window.
+      schema:
+        type: integer
+        minimum: 0
+    RateLimitReset:
+      description: Seconds until the current window resets.
+      schema:
+        type: integer
+        minimum: 0
   schemas:
     Error:
       type: object
@@ -84,7 +103,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, processing, completed, failed]
+          enum: [processing, completed, failed]
         progress:
           type: number
           minimum: 0
@@ -139,6 +158,13 @@ paths:
       responses:
         '201':
           description: Created
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
               schema:
@@ -146,9 +172,28 @@ paths:
               examples:
                 default:
                   $ref: '#/components/schemas/UploadResponse/examples/default'
-        '4XX':
+        '400':
           $ref: '#/components/responses/ErrorResponse'
-        '5XX':
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
           $ref: '#/components/responses/ErrorResponse'
   /api/v1/files/{uuid}/password:
     post:
@@ -173,9 +218,46 @@ paths:
       responses:
         '200':
           description: OK
-        '4XX':
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+                  status:
+                    type: string
+                    enum: [ok]
+                required: [uuid, status]
+        '400':
           $ref: '#/components/responses/ErrorResponse'
-        '5XX':
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
           $ref: '#/components/responses/ErrorResponse'
   /api/v1/convert:
     post:
@@ -195,18 +277,46 @@ paths:
       responses:
         '202':
           description: Accepted
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConvertAccepted'
-        '4XX':
+        '400':
           $ref: '#/components/responses/ErrorResponse'
-        '5XX':
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
           $ref: '#/components/responses/ErrorResponse'
   /api/v1/jobs/{jobId}:
     get:
       summary: Get job status
       operationId: getJob
+      description: |
+        Jobs are ephemeral. Fetch the result soon after completion.
       parameters:
         - name: jobId
           in: path
@@ -220,12 +330,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
         '404':
           description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /api/v1/jobs/{jobId}/result:
     get:
       summary: Download the conversion result
@@ -254,9 +370,21 @@ paths:
               schema:
                 type: string
                 format: binary
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
         '404':
           description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: Job not completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'

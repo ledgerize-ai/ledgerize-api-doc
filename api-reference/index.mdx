@@ -18,6 +18,10 @@ Status: Stable (v1)
 Ledgerize exposes a RESTful surface. All endpoints require TLS and are versioned with the `/v1`
 prefix. Non-GET endpoints accept/return JSON unless noted otherwise.
 
+<Info>
+  Job IDs are ephemeral. Treat `/jobs/{jobId}` and `/jobs/{jobId}/result` as short-lived: poll, fetch the result, then store it on your side.
+</Info>
+
 ### Authentication
 
 - **Header**: `X-Api-Key: YOUR_LEDGERIZE_API_KEY`
